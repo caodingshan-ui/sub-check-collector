@@ -59,7 +59,9 @@ export function loadConfig(): Config {
     scheduleInterval: process.env.SCHEDULE_INTERVAL || DEFAULT_CONFIG.scheduleInterval,
     outputFile: process.env.OUTPUT_FILE || DEFAULT_CONFIG.outputFile,
     maxRepositories: parseInt(process.env.MAX_REPOSITORIES || String(DEFAULT_CONFIG.maxRepositories)),
-    configYamlPath: process.env.CONFIG_YAML_PATH || DEFAULT_CONFIG.configYamlPath,
+    configYamlPath: process.env.CONFIG_YAML_PATH !== undefined
+      ? (process.env.CONFIG_YAML_PATH.trim() || undefined)
+      : DEFAULT_CONFIG.configYamlPath,
     minStars: parseInt(process.env.MIN_STARS || String(DEFAULT_CONFIG.minStars)),
     maxDaysSinceUpdate: parseInt(process.env.MAX_DAYS_SINCE_UPDATE || String(DEFAULT_CONFIG.maxDaysSinceUpdate)),
     validateLinks: process.env.VALIDATE_LINKS === 'true' || DEFAULT_CONFIG.validateLinks,
