@@ -17,6 +17,8 @@ config.yaml.original
 output/*
 !output/.gitkeep
 !output/collector-sub-urls.txt
+!output/collector-sub-urls.stats.json
+!output/source-sub-urls.txt
 !output/subscriptions.md
 
 # 日志

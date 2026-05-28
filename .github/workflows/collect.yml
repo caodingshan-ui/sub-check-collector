@@ -31,6 +31,10 @@ jobs:
       OUTPUT_FILE: output/subscriptions.md
       CONFIG_YAML_PATH: ''
       EXPORT_MAX_URLS: ${{ vars.EXPORT_MAX_URLS || '500' }}
+      AGGREGATE_MAX_SOURCES: ${{ vars.AGGREGATE_MAX_SOURCES || '120' }}
+      AGGREGATE_FETCH_TIMEOUT: ${{ vars.AGGREGATE_FETCH_TIMEOUT || '12000' }}
+      AGGREGATE_CONCURRENCY: ${{ vars.AGGREGATE_CONCURRENCY || '12' }}
+      AGGREGATE_MAX_PROXIES: ${{ vars.AGGREGATE_MAX_PROXIES || '3000' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,22 +53,25 @@ jobs:
       - name: Run collector
         run: npm run once
 
-      - name: Export plain URL list
-        run: node scripts/export-sub-urls.js output/subscriptions.md output/collector-sub-urls.txt
+      - name: Export source URL list
+        run: node scripts/export-sub-urls.js output/subscriptions.md output/source-sub-urls.txt
+
+      - name: Build aggregate subscription
+        run: node scripts/build-aggregate-subscription.js output/source-sub-urls.txt output/collector-sub-urls.txt
 
       - name: Summarize output
         run: |
           echo "## Collector output" >> "$GITHUB_STEP_SUMMARY"
-          echo "- URL count: $(grep -c '^http' output/collector-sub-urls.txt || true)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Source URL count: $(grep -c '^http' output/source-sub-urls.txt || true)" >> "$GITHUB_STEP_SUMMARY"
           echo "- Raw path: output/collector-sub-urls.txt" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          head -20 output/collector-sub-urls.txt >> "$GITHUB_STEP_SUMMARY"
+          cat output/collector-sub-urls.stats.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit updated output
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add output/subscriptions.md output/collector-sub-urls.txt
+          git add output/subscriptions.md output/source-sub-urls.txt output/collector-sub-urls.txt output/collector-sub-urls.stats.json
           if git diff --cached --quiet; then
             echo 'No output changes to commit.'
           else
