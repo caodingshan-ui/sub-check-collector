@@ -1,0 +1,73 @@
+name: collect subscription urls
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 03:25 UTC = 11:25 Asia/Shanghai. GitHub schedules run in UTC.
+    - cron: '25 3 */3 * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collect-subscription-urls
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      NODE_ENV: development
+      GITHUB_TOKEN: ${{ secrets.COLLECTOR_GITHUB_TOKEN || github.token }}
+      SEARCH_KEYWORDS: ${{ vars.SEARCH_KEYWORDS || 'free,v2ray,clash,sub,subscription' }}
+      MAX_REPOSITORIES: ${{ vars.MAX_REPOSITORIES || '80' }}
+      MIN_STARS: ${{ vars.MIN_STARS || '3' }}
+      MAX_DAYS_SINCE_UPDATE: ${{ vars.MAX_DAYS_SINCE_UPDATE || '60' }}
+      VALIDATE_LINKS: ${{ vars.VALIDATE_LINKS || 'true' }}
+      LINK_VALIDATION_TIMEOUT: ${{ vars.LINK_VALIDATION_TIMEOUT || '8000' }}
+      LINK_VALIDATION_CONCURRENCY: ${{ vars.LINK_VALIDATION_CONCURRENCY || '8' }}
+      ENABLE_FILE_LOG: 'false'
+      OUTPUT_FILE: output/subscriptions.md
+      CONFIG_YAML_PATH: ''
+      EXPORT_MAX_URLS: ${{ vars.EXPORT_MAX_URLS || '500' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --include=dev
+
+      - name: Run collector
+        run: npm run once
+
+      - name: Export plain URL list
+        run: node scripts/export-sub-urls.js output/subscriptions.md output/collector-sub-urls.txt
+
+      - name: Summarize output
+        run: |
+          echo "## Collector output" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL count: $(grep -c '^http' output/collector-sub-urls.txt || true)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Raw path: output/collector-sub-urls.txt" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          head -20 output/collector-sub-urls.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit updated output
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add output/subscriptions.md output/collector-sub-urls.txt
+          if git diff --cached --quiet; then
+            echo 'No output changes to commit.'
+          else
+            git commit -m 'Update collected subscription URLs'
+            git push
+          fi
