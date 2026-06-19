@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-06-16T09:07:03.435Z",
+  "generatedAt": "2026-06-19T08:43:50.114Z",
   "sources": 120,
   "fetched": 118,
   "failed": 2,
-  "clashProxies": 564,
-  "uriLines": 873,
+  "clashProxies": 593,
+  "uriLines": 813,
   "output": "output/collector-sub-urls.txt"
 }
